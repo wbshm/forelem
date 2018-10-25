@@ -1,3 +1,6 @@
+import re
+import sys
+
 import requests
 from urllib.parse import urlparse
 import json
@@ -14,7 +17,7 @@ baseUrl = {
         'https://waltz.ele.me/qq/userinfo/?code=71804A0678A3780983791B0C5A324674',
 }
 
-#code: 71804A0678A3780983791B0C5A324674
+# code: 71804A0678A3780983791B0C5A324674
 headers = {
     "user-agent":
         "Mozilla/5.0 (Linux; Android 7.0; MIX Build/NRD90M; wv) AppleWebKit/537.36 (KHTML, like Gecko) Version/4.0 Chrome/57.0.2987.132 MQQBrowser/6.2 TBS/044004 Mobile Safari/537.36 V1_AND_SQ_7.5.0_794_YYB_D QQ/7.5.0.3430 NetType/WIFI WebP/0.3.0 Pixel/1080",
@@ -25,16 +28,35 @@ data = {}
 res = requests.get('http://baidu.com', headers=headers, data=data)
 
 
+
 class login_info_obj(object):
     login_cookie = ""
     eleme_url = ""
-    user_info = {}
+    user_info = {}  # 用户信息
+    luck_number = 0  # 幸运的礼包码
+    sn = ""
 
     def __init__(self, qq, start_url):
-        with open("./tmp/userInfo/qq_%s.json" % qq, 'r', encoding='utf-8') as content:
-            print(content)
-            self.user_info = json.load(content)
+        try:
+            with open("./tmp/userInfo/qq_%s.json" % qq, 'r', encoding='utf-8') as content:
+                print(content)
+                self.user_info = json.load(content)
+        except FileNotFoundError:
+            print('File Not Found Error')
+            exit(sys._getframe().f_lineno)
         self.eleme_url = start_url
+        self.analysis_url()
+
+    def do_it(self):
+        res = self.open_page()
+        try:
+            result = res.json()
+            #{"message":"用户验证失败","name":"PHONE_IS_EMPTY"}
+            if 'name' in result and result['name'] == 'PHONE_IS_EMPTY':
+                self.check_phone()
+        except ValueError:
+            print('fatal error')
+            exit(sys._getframe().f_lineno)
 
     def get_cookie(self):
         return self.login_cookie
@@ -79,7 +101,7 @@ class login_info_obj(object):
             sn = '29e47b57971c1c9d'
         return "eosid=" + str(int(sn, 16))
 
-    def moblie_send_code(self, mobile):
+    def mobile_send_code(self, mobile):
         request_url = "https://h5.ele.me/restapi/eus/login/mobile_send_code"
         request_data = {
             'captcha_hash': '',
@@ -107,17 +129,12 @@ class login_info_obj(object):
         self.set_cookie(requests.cookies.RequestsCookieJar())  # sid
         return json.loads(res.text)
 
-    def open_page(self, sn, sign):
-        """
-
-        :param sn:
-        :param sign:
-        """
-        request_url = "https://h5.ele.me/restapi/marketing/promotion/weixin/" + self.user_info.openid
+    def open_page(self):
+        request_url = "https://h5.ele.me/restapi/marketing/promotion/weixin/" + self.user_info['openid']
         request_data = {
             {
                 'device_id': "",
-                'group_sn': sn,
+                'group_sn': self.sn,
                 'hardware_id': "",
                 'method': "phone",
                 'phone': "",
@@ -130,17 +147,53 @@ class login_info_obj(object):
             }
         }
         request_header = {
-            "x-shard": self.get_xshard(sn),
+            "x-shard": self.get_xshard(self.sn),
             'cookie': "SID=" + self.cookie.sid
         }
         res = requests.post(request_url, data=request_data, headers=request_header)
+        return res
+
+    def analysis_url(self):
+        self.sn = self._get_url_params(self.eleme_url, 'sn=')
+        self.luck_number = self._get_url_params(self.eleme_url, 'luck_number=')
+        is_lucky_group = self._get_url_params(self.eleme_url, 'is_lucky_group=')
+        pass
+
+    @staticmethod
+    def _get_url_params(url, pick_key):
+        url_dic = urlparse(url)
+        param_arr = url_dic.fragment.split('&')
+        try:
+            return list(filter(lambda x: pick_key == x[:len(pick_key)], param_arr)).pop()[len(pick_key):]
+        except IndexError:
+            print('param does not exist')
+            return ""
+
+    def check_phone(self):
+        phone_pat = re.compile('^(13\d|14[5|7]|15\d|166|17[3|6|7]|18\d)\d{8}$')
+        count = 3
+        while True:
+            mobile = input("请输入电话号码,以获取验证短信:")
+            res = re.search(phone_pat, mobile)
+            if res:
+                print('正常手机号')
+                return True
+            else:
+                print('手机号错误')
+                count -= 1
+            if count <= 0:
+                return False
 
 if __name__ == '__main__':
     start_url = "https://h5.ele.me/hongbao/#hardware_id=&is_lucky_group=True&lucky_number=8&track_id=&platform=0&sn=10fcda587ea2d807&theme_id=1969&device_id=&refer_user_id=1097914722"
-    urldic = urlparse(start_url)
-    arr = urldic.fragment.split('&')
-    sn = filter(lambda x: 'sn' == x[:2], arr)
-    print(sn)
-    print(arr)
+    qq = 987094841
+    try:
+        with open("./tmp/userInfo/qq_%s.json" % qq, 'r', encoding='utf-8') as content:
+            print(content)
+            user_info = json.load(content)
+            print(user_info)
+    except FileNotFoundError:
+        print('File Not Found Error')
+        # exit(sys._getframe().f_lineno)
+    print()
     # a = login_info_obj(98709484, start_url)
-    # print(a.user_info)
