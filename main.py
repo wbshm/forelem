@@ -31,7 +31,6 @@ class login_info_obj(object):
     def do_it(self):
         res = self.open_page()
         try:
-            print(self.lucky_number)
             result = res.json()
             # {"message":"用户验证失败","name":"PHONE_IS_EMPTY"}
             if 'name' in result and result['name'] == 'PHONE_IS_EMPTY':
@@ -52,6 +51,8 @@ class login_info_obj(object):
                 elif count >= self.lucky_number - 1:
                     print('the lucky page is gone')
                     exit(-1)
+                else:
+                    print('current index is %s' % count)
         except ValueError:
             print('fatal error')
             exit(sys._getframe().f_lineno)
@@ -165,8 +166,8 @@ if __name__ == '__main__':
     # res = requests.post('http://127.0.0.1')
     # print(res.cookies['nihao1'])
     # exit(1)
-    qq = 98709484
-    start_url = "https://h5.ele.me/hongbao/?from=groupmessage&isappinstalled=0#hardware_id=&is_lucky_group=True&lucky_number=0&track_id=&platform=0&sn=2a10ee28403b1c61&theme_id=3257&device_id=&refer_user_id=32936218"
+    qq = 2853306388
+    start_url = "https://h5.ele.me/hongbao/?from=groupmessage&isappinstalled=0#hardware_id=&is_lucky_group=True&lucky_number=0&track_id=&platform=0&sn=2a1410571cb9d875&theme_id=3321&device_id=&refer_user_id=13526990"
     # try:
     #     with open("./tmp/userInfo/qq_%s.json" % qq, 'r', encoding='utf-8') as content:
     #         print(content)
